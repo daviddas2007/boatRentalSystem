@@ -64,3 +64,66 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Docker Deployment
+
+This repository includes a production-oriented Docker setup for Laravel + Vite assets.
+
+### Files added
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-compose.prod.yml`
+- `.env.docker.example`
+- `docker/entrypoint.sh`
+
+### 1) Prepare environment
+
+```bash
+cp .env.docker.example .env.docker
+```
+
+Set values in `.env.docker`, especially:
+
+- `APP_KEY`
+- `DB_*`
+- `MYSQL_*`
+- `STRIPE_*`
+
+Generate an app key (if empty):
+
+```bash
+docker compose run --rm app php artisan key:generate --show
+```
+
+Copy the generated key into `.env.docker` as `APP_KEY=...`.
+
+### 2) Build and start containers
+
+```bash
+docker compose up -d --build
+```
+
+Application URL:
+
+- `http://localhost:8080`
+
+### 3) Run migrations
+
+```bash
+docker compose exec app php artisan migrate --force
+```
+
+### 4) Production compose variant
+
+`docker-compose.prod.yml` maps the app to port `80` and uses the prebuilt image tag:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+If needed, build/tag image before deploying:
+
+```bash
+docker build -t boatrentsystem-app:latest .
+```

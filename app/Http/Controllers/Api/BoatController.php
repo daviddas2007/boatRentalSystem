@@ -179,6 +179,15 @@ class BoatController extends Controller
         return response()->json($boats);
     }
 
+    public function showOwned(Request $request, Boat $boat): JsonResponse
+    {
+        if ($boat->owner_id !== $request->user()->id && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json($boat->load(['images', 'owner:id,name', 'reviews.user:id,name']));
+    }
+
     public function getAvailability(Boat $boat, Request $request): JsonResponse
     {
         $request->validate([

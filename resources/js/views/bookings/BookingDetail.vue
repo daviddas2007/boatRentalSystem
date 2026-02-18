@@ -83,6 +83,14 @@
       </div>
 
       <div class="flex space-x-4">
+        <router-link
+          v-if="canPayNow"
+          :to="`/bookings/${booking.id}/payment`"
+          class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition"
+        >
+          Pay Now
+        </router-link>
+
         <button v-if="booking.status === 'pending' || booking.status === 'confirmed'" @click="cancelBooking" :disabled="cancelling" class="bg-red-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50">
           {{ cancelling ? 'Cancelling...' : 'Cancel Booking' }}
         </button>
@@ -128,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import api from '../../services/api';
 
 const props = defineProps({ id: [String, Number] });
@@ -139,6 +147,11 @@ const showReviewForm = ref(false);
 const submittingReview = ref(false);
 
 const reviewForm = reactive({ rating: 5, comment: '' });
+
+const canPayNow = computed(() => {
+  if (!booking.value) return false;
+  return booking.value.status === 'pending' && booking.value.payment?.status !== 'succeeded';
+});
 
 const statusClass = (status) => {
   const classes = {

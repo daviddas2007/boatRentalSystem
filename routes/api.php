@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/boats/{boat}', [BoatController::class, 'destroy']);
     Route::post('/boats/{boat}/images', [BoatController::class, 'uploadImages']);
     Route::post('/boats/{boat}/availability', [BoatController::class, 'setAvailability']);
+    Route::get('/my-boats/{boat}', [BoatController::class, 'showOwned']);
     Route::get('/my-boats', [BoatController::class, 'myBoats']);
 
     Route::get('/bookings', [BookingController::class, 'index']);

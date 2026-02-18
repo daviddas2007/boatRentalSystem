@@ -140,8 +140,8 @@ const handleBooking = async () => {
       duration_value: form.duration_value,
       notes: form.notes,
     });
-    success.value = 'Booking created successfully!';
-    setTimeout(() => router.push(`/bookings/${response.data.id}`), 1500);
+    success.value = 'Booking created. Redirecting to payment...';
+    setTimeout(() => router.push(`/bookings/${response.data.id}/payment`), 900);
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to create booking.';
   } finally {

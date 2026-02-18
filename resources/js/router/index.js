@@ -9,6 +9,7 @@ import BoatDetail from '../views/boats/BoatDetail.vue';
 import BookingCreate from '../views/bookings/BookingCreate.vue';
 import BookingHistory from '../views/bookings/BookingHistory.vue';
 import BookingDetail from '../views/bookings/BookingDetail.vue';
+import BookingPayment from '../views/bookings/BookingPayment.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import AdminBoats from '../views/admin/Boats.vue';
 import AdminBoatForm from '../views/admin/BoatForm.vue';
@@ -23,6 +24,7 @@ const routes = [
     { path: '/book/:slug', name: 'booking-create', component: BookingCreate, props: true, meta: { auth: true } },
     { path: '/my-bookings', name: 'booking-history', component: BookingHistory, meta: { auth: true } },
     { path: '/bookings/:id', name: 'booking-detail', component: BookingDetail, props: true, meta: { auth: true } },
+    { path: '/bookings/:id/payment', name: 'booking-payment', component: BookingPayment, props: true, meta: { auth: true } },
     { path: '/admin', name: 'admin-dashboard', component: AdminDashboard, meta: { admin: true } },
     { path: '/admin/boats', name: 'admin-boats', component: AdminBoats, meta: { admin: true } },
     { path: '/admin/boats/create', name: 'admin-boat-create', component: AdminBoatForm, meta: { admin: true } },

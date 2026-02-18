@@ -167,7 +167,7 @@ const handleSubmit = async () => {
 onMounted(async () => {
   if (isEdit.value) {
     try {
-      const response = await api.get(`/boats/${props.id}`);
+      const response = await api.get(`/my-boats/${props.id}`);
       const boat = response.data;
       form.value = {
         name: boat.name,
