@@ -127,3 +127,35 @@ If needed, build/tag image before deploying:
 ```bash
 docker build -t boatrentsystem-app:latest .
 ```
+
+## Railway Deployment
+
+Railway can deploy this project directly from `Dockerfile`.
+
+### Railway settings
+
+- Root Directory: repository root
+- Builder: Dockerfile
+- Start Command: leave empty (uses image `CMD`)
+
+### Required Railway environment variables
+
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_URL=https://<your-railway-domain>`
+- `APP_KEY=base64:...`
+- `DB_CONNECTION=mysql`
+- `DB_HOST=<railway-mysql-host>`
+- `DB_PORT=<railway-mysql-port>`
+- `DB_DATABASE=<railway-mysql-database>`
+- `DB_USERNAME=<railway-mysql-user>`
+- `DB_PASSWORD=<railway-mysql-password>`
+- `STRIPE_KEY=...`
+- `STRIPE_SECRET=...`
+- `STRIPE_WEBHOOK_SECRET=...`
+- Optional: `RUN_MIGRATIONS=true`
+
+Notes:
+
+- The container now listens on Railway `PORT` automatically.
+- Do not hardcode `PORT`; Railway injects it at runtime.

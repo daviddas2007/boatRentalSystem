@@ -1,54 +1,76 @@
-# syntax=docker/dockerfile:1.7
+# ============================================
+# Stage 1: Build Frontend (Vue 3 + Vite)
+# ============================================
+FROM node:20-alpine AS frontend-build
 
-FROM composer:2.7 AS composer_deps
 WORKDIR /app
-COPY composer.json composer.lock ./
-RUN composer install \
-    --no-dev \
-    --prefer-dist \
-    --no-interaction \
-    --no-progress \
-    --optimize-autoloader
 
-FROM node:20-alpine AS frontend_builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY resources ./resources
-COPY public ./public
-COPY vite.config.js postcss.config.js tailwind.config.js ./
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install Node dependencies
+RUN npm install
+
+# Copy frontend source files
+COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY resources/ ./resources/
+
+# Build Vue 3 frontend
 RUN npm run build
 
-FROM php:8.3-apache AS runtime
+# ============================================
+# Stage 2: PHP Application (no Apache)
+# ============================================
+FROM php:8.2-cli
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-WORKDIR /var/www/html
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libicu-dev \
-    libzip-dev \
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
     libpng-dev \
-    libjpeg62-turbo-dev \
+    libjpeg-dev \
     libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
     unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql bcmath exif gd zip \
-    && a2enmod rewrite \
-    && sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
-    && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer_deps /app/vendor ./vendor
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer files first (for Docker cache)
+COPY composer.json composer.lock* ./
+
+# Install PHP dependencies (no dev)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copy the rest of the application
 COPY . .
-COPY --from=frontend_builder /app/public/build ./public/build
 
-RUN rm -rf node_modules tests \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && php artisan package:discover --ansi
+# Create an empty .env file (needed by Laravel artisan commands)
+RUN touch .env
 
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint
+# Run composer scripts after full copy
+RUN composer dump-autoload --optimize
 
-EXPOSE 80
+# Copy built frontend assets from Stage 1
+COPY --from=frontend-build /app/public/build ./public/build
 
-ENTRYPOINT ["entrypoint"]
-CMD ["apache2-foreground"]
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache
+
+# Create storage link
+RUN php artisan storage:link || true
+
+# Startup script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
