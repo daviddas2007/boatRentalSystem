@@ -2,16 +2,16 @@ name: CI / Deploy
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, develop]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
  
   deploy:
     name: Deploy to Ubuntu
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     steps:
       - name: Checkout
@@ -29,7 +29,7 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
 
             echo "── Pulling latest code ──"
-            git pull origin main
+            git pull origin master
 
             echo "── Installing PHP dependencies (production) ──"
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
