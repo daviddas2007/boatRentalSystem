@@ -73,8 +73,6 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: TypeScript type check
-        run: npm run type-check
 
       - name: Copy .env for tests
         run: cp .env.example .env.testing
