@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "Checking required secrets..."
 
-          if [ -z "${{ secrets.DEPLOY_USER }}" ]; then
+          if [ -z "${{ vars.DEPLOY_USER }}" ]; then
             echo "❌ DEPLOY_USER is EMPTY or MISSING"
             exit 1
           else
