@@ -1,0 +1,156 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 1. Test
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Test (PHP 8.3 + PG 16 + Redis)
+    runs-on: ubuntu-latest
+
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: workshop_test
+          MYSQL_USER: workshop
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: rootsecret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -p rootsecret"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo, pdo_pgsql, redis, bcmath, intl
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: TypeScript type check
+        run: npm run type-check
+
+      - name: Copy .env for tests
+        run: cp .env.example .env.testing
+
+      - name: Write test environment overrides
+        run: |
+          echo "APP_ENV=testing" >> .env.testing
+          echo "APP_KEY=" >> .env.testing
+          echo "DB_CONNECTION=pgsql" >> .env.testing
+          echo "DB_HOST=127.0.0.1" >> .env.testing
+          echo "DB_PORT=3306" >> .env.testing
+          echo "DB_DATABASE=workshop_test" >> .env.testing
+          echo "DB_USERNAME=workshop" >> .env.testing
+          echo "DB_PASSWORD=secret" >> .env.testing
+          echo "REDIS_HOST=127.0.0.1" >> .env.testing
+          echo "REDIS_PORT=6379" >> .env.testing
+          echo "CACHE_STORE=redis" >> .env.testing
+          echo "QUEUE_CONNECTION=redis" >> .env.testing
+
+      - name: Generate app key
+        run: php artisan key:generate --env=testing
+
+      - name: Run database migrations
+        run: php artisan migrate --env=testing --force
+
+      - name: Run Pest test suite
+        run: php artisan test --env=testing --parallel
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. Deploy  (main branch only, after tests pass)
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Ubuntu
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "── Pulling latest code ──"
+            git pull origin main
+
+            echo "── Installing PHP dependencies (production) ──"
+            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            echo "── Installing JS dependencies ──"
+            npm ci --omit=dev
+
+            echo "── Building frontend assets ──"
+            npm run build
+
+            echo "── Running migrations ──"
+            php artisan migrate --force
+
+            echo "── Caching config / routes / views ──"
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan event:cache
+
+            echo "── Restarting queue workers ──"
+            php artisan queue:restart
+
+            echo "── Reloading PHP-FPM ──"
+            sudo systemctl reload php8.3-fpm
+
+            echo "── Deploy complete ──"
