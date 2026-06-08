@@ -7,31 +7,69 @@ on:
     branches: [main]
 
 jobs:
- 
+
   deploy:
     name: Deploy to Ubuntu
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # =========================
+      # DEBUG STEP (SAFE)
+      # =========================
+      - name: Debug secrets (NO VALUES EXPOSED)
+        run: |
+          echo "Checking required secrets..."
+
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "❌ DEPLOY_HOST is EMPTY or MISSING"
+            exit 1
+          else
+            echo "✅ DEPLOY_HOST is set"
+          fi
+
+          if [ -z "${{ secrets.DEPLOY_USER }}" ]; then
+            echo "❌ DEPLOY_USER is EMPTY or MISSING"
+            exit 1
+          else
+            echo "✅ DEPLOY_USER is set"
+          fi
+
+          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "❌ DEPLOY_SSH_KEY is EMPTY or MISSING"
+            exit 1
+          else
+            echo "✅ DEPLOY_SSH_KEY is set"
+          fi
+
+          if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+            echo "❌ DEPLOY_PATH is EMPTY or MISSING"
+            exit 1
+          else
+            echo "✅ DEPLOY_PATH is set"
+          fi
+
+      # =========================
+      # SSH DEPLOY STEP
+      # =========================
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          port: 22
           script: |
             set -e
+
             cd ${{ secrets.DEPLOY_PATH }}
 
             echo "── Pulling latest code ──"
             git pull origin main
 
-            echo "── Installing PHP dependencies (production) ──"
+            echo "── Installing PHP dependencies ──"
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
             echo "── Installing JS dependencies ──"
