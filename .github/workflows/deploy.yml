@@ -13,6 +13,7 @@ jobs:
   test:
     name: Test (PHP 8.3 + PG 16 + Redis)
     runs-on: ubuntu-latest
+    services:
 
       mysql:
         image: mysql:8.4
