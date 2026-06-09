@@ -11,7 +11,7 @@ jobs:
   # 1. Test
   # ─────────────────────────────────────────────────────────────
   test:
-    name: Test (PHP 8.3 + PG 16 + Redis)
+    name: Test (PHP 8.4.0 + PG 16 + Redis)
     runs-on: ubuntu-latest
     services:
 
@@ -44,10 +44,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up PHP 8.3
+      - name: Set up PHP 8.4.0
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3"
+          php-version: "8.4.0"
           extensions: pdo, pdo_pgsql, redis, bcmath, intl
           coverage: none
 
