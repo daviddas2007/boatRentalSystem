@@ -130,8 +130,8 @@ jobs:
             echo "── Installing PHP dependencies (production) ──"
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-            echo "── Installing JS dependencies ──"
-            npm ci --omit=dev
+            echo "── Installing JS dependencies (including dev) ──"
+            npm ci
 
             echo "── Building frontend assets ──"
             npm run build
